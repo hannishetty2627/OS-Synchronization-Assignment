@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dining Philosophers - Semaphore</title>
+<style>
+body{font-family:Arial;background:#eef2f7;color:#183153;padding:20px}
+.card{background:white;padding:18px;margin:12px 0;border-radius:12px}
+button{padding:10px;margin:4px;background:#1769aa;color:white;border:0;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+td,th{border:1px solid #ccc;padding:8px;text-align:left}
+svg{width:100%;max-width:450px;display:block;margin:auto}
+</style>
+</head>
+<body>
+<h1>Dining Philosophers - Semaphore Solution</h1>
+<div class="card">
+<h2 id="message">Press Play to start</h2>
+<p id="counter">Event 0</p>
+<p id="states"></p>
+<button onclick="play()">Play</button>
+<button onclick="pause()">Pause</button>
+<button onclick="next()">Next Event</button>
+<button onclick="reset()">Reset</button>
+<div style="background:#ddd;height:10px"><div id="progress" style="background:#1769aa;height:10px;width:0%"></div></div>
+</div>
+<div class="card">
+<h2>Table Visualization</h2>
+<svg viewBox="0 0 400 400">
+<circle cx="200" cy="200" r="95" fill="#f5e5c8" stroke="#c6a56b" stroke-width="3"/>
+<g id="sticks"></g><g id="people"></g>
+</svg>
+</div>
+<div class="card">
+<h2>Execution Log</h2>
+<table><thead><tr><th>Time</th><th>Philosopher</th><th>Event</th></tr></thead>
+<tbody id="logs"></tbody></table>
+</div>
+<script>
+const events=[{"time": 0.002, "philosopher": 3, "action": "thinking", "message": "Philosopher 4 is thinking", "states": ["Thinking", "Thinking", "Thinking", "Thinking"]}, {"time": 0.054, "philosopher": 2, "action": "thinking", "message": "Philosopher 3 is thinking", "states": ["Thinking", "Thinking", "Thinking", "Thinking"]}, {"time": 0.109, "philosopher": 1, "action": "thinking", "message": "Philosopher 2 is thinking", "states": ["Thinking", "Thinking", "Thinking", "Thinking"]}, {"time": 0.16, "philosopher": 0, "action": "thinking", "message": "Philosopher 1 is thinking", "states": ["Thinking", "Thinking", "Thinking", "Thinking"]}, {"time": 0.331, "philosopher": 3, "action": "hungry", "message": "Philosopher 4 is hungry and waiting", "states": ["Thinking", "Thinking", "Thinking", "Hungry"]}, {"time": 0.331, "philosopher": 3, "action": "left", "message": "Philosopher 4 picked up chopstick 4", "states": ["Thinking", "Thinking", "Thinking", "Has left chopstick"]}, {"time": 0.331, "philosopher": 3, "action": "eating", "message": "Philosopher 4 is eating", "states": ["Thinking", "Thinking", "Thinking", "Eating"]}, {"time": 0.442, "philosopher": 1, "action": "hungry", "message": "Philosopher 2 is hungry and waiting", "states": ["Thinking", "Hungry", "Thinking", "Eating"]}, {"time": 0.443, "philosopher": 1, "action": "left", "message": "Philosopher 2 picked up chopstick 2", "states": ["Thinking", "Has left chopstick", "Thinking", "Eating"]}, {"time": 0.443, "philosopher": 1, "action": "eating", "message": "Philosopher 2 is eating", "states": ["Thinking", "Eating", "Thinking", "Eating"]}, {"time": 0.615, "philosopher": 2, "action": "hungry", "message": "Philosopher 3 is hungry and waiting", "states": ["Thinking", "Eating", "Hungry", "Eating"]}, {"time": 0.656, "philosopher": 0, "action": "hungry", "message": "Philosopher 1 is hungry and waiting", "states": ["Hungry", "Eating", "Hungry", "Eating"]}, {"time": 0.926, "philosopher": 3, "action": "finished", "message": "Philosopher 4 finished eating", "states": ["Hungry", "Eating", "Hungry", "Thinking"]}, {"time": 0.926, "philosopher": 0, "action": "left", "message": "Philosopher 1 picked up chopstick 1", "states": ["Has left chopstick", "Eating", "Hungry", "Thinking"]}, {"time": 0.961, "philosopher": 1, "action": "finished", "message": "Philosopher 2 finished eating", "states": ["Has left chopstick", "Thinking", "Hungry", "Thinking"]}, {"time": 0.961, "philosopher": 2, "action": "left", "message": "Philosopher 3 picked up chopstick 3", "states": ["Has left chopstick", "Thinking", "Has left chopstick", "Thinking"]}, {"time": 0.961, "philosopher": 2, "action": "eating", "message": "Philosopher 3 is eating", "states": ["Has left chopstick", "Thinking", "Eating", "Thinking"]}, {"time": 0.961, "philosopher": 0, "action": "eating", "message": "Philosopher 1 is eating", "states": ["Eating", "Thinking", "Eating", "Thinking"]}, {"time": 1.127, "philosopher": 3, "action": "thinking", "message": "Philosopher 4 is thinking", "states": ["Eating", "Thinking", "Eating", "Thinking"]}, {"time": 1.162, "philosopher": 1, "action": "thinking", "message": "Philosopher 2 is thinking", "states": ["Eating", "Thinking", "Eating", "Thinking"]}, {"time": 1.306, "philosopher": 2, "action": "finished", "message": "Philosopher 3 finished eating", "states": ["Eating", "Thinking", "Thinking", "Thinking"]}, {"time": 1.506, "philosopher": 2, "action": "thinking", "message": "Philosopher 3 is thinking", "states": ["Eating", "Thinking", "Thinking", "Thinking"]}, {"time": 1.56, "philosopher": 0, "action": "finished", "message": "Philosopher 1 finished eating", "states": ["Thinking", "Thinking", "Thinking", "Thinking"]}, {"time": 1.761, "philosopher": 0, "action": "thinking", "message": "Philosopher 1 is thinking", "states": ["Thinking", "Thinking", "Thinking", "Thinking"]}, {"time": 1.764, "philosopher": 3, "action": "hungry", "message": "Philosopher 4 is hungry and waiting", "states": ["Thinking", "Thinking", "Thinking", "Hungry"]}, {"time": 1.764, "philosopher": 3, "action": "left", "message": "Philosopher 4 picked up chopstick 4", "states": ["Thinking", "Thinking", "Thinking", "Has left chopstick"]}, {"time": 1.764, "philosopher": 3, "action": "eating", "message": "Philosopher 4 is eating", "states": ["Thinking", "Thinking", "Thinking", "Eating"]}, {"time": 1.778, "philosopher": 1, "action": "hungry", "message": "Philosopher 2 is hungry and waiting", "states": ["Thinking", "Hungry", "Thinking", "Eating"]}, {"time": 1.778, "philosopher": 1, "action": "left", "message": "Philosopher 2 picked up chopstick 2", "states": ["Thinking", "Has left chopstick", "Thinking", "Eating"]}, {"time": 1.778, "philosopher": 1, "action": "eating", "message": "Philosopher 2 is eating", "states": ["Thinking", "Eating", "Thinking", "Eating"]}, {"time": 2.015, "philosopher": 2, "action": "hungry", "message": "Philosopher 3 is hungry and waiting", "states": ["Thinking", "Eating", "Hungry", "Eating"]}, {"time": 2.282, "philosopher": 3, "action": "finished", "message": "Philosopher 4 finished eating", "states": ["Thinking", "Eating", "Hungry", "Thinking"]}, {"time": 2.367, "philosopher": 1, "action": "finished", "message": "Philosopher 2 finished eating", "states": ["Thinking", "Thinking", "Hungry", "Thinking"]}, {"time": 2.367, "philosopher": 2, "action": "left", "message": "Philosopher 3 picked up chopstick 3", "states": ["Thinking", "Thinking", "Has left chopstick", "Thinking"]}, {"time": 2.367, "philosopher": 2, "action": "eating", "message": "Philosopher 3 is eating", "states": ["Thinking", "Thinking", "Eating", "Thinking"]}, {"time": 2.428, "philosopher": 0, "action": "hungry", "message": "Philosopher 1 is hungry and waiting", "states": ["Hungry", "Thinking", "Eating", "Thinking"]}, {"time": 2.428, "philosopher": 0, "action": "left", "message": "Philosopher 1 picked up chopstick 1", "states": ["Has left chopstick", "Thinking", "Eating", "Thinking"]}, {"time": 2.428, "philosopher": 0, "action": "eating", "message": "Philosopher 1 is eating", "states": ["Eating", "Thinking", "Eating", "Thinking"]}, {"time": 2.792, "philosopher": 2, "action": "finished", "message": "Philosopher 3 finished eating", "states": ["Eating", "Thinking", "Thinking", "Thinking"]}, {"time": 3.018, "philosopher": 0, "action": "finished", "message": "Philosopher 1 finished eating", "states": ["Thinking", "Thinking", "Thinking", "Thinking"]}];
+const positions=[[200,65],[335,200],[200,335],[65,200]];
+const stickPositions=[[270,120],[280,270],[120,280],[120,120]];
+let index=0,timer=null;
+
+function draw(states){
+ document.getElementById("people").innerHTML=states.map((s,i)=>{
+  let [x,y]=positions[i];
+  let c=s==="Eating"?"#39a96b":s==="Hungry"||s==="Has left chopstick"?"#efb447":"#528fd1";
+  return `<g><circle cx="${x}" cy="${y}" r="30" fill="${c}" stroke="#183153" stroke-width="2"/><text x="${x}" y="${y-2}" text-anchor="middle" font-size="12" fill="white">P${i+1}</text><text x="${x}" y="${y+12}" text-anchor="middle" font-size="8" fill="white">${s}</text></g>`;
+ }).join("");
+ document.getElementById("sticks").innerHTML=stickPositions.map(([x,y],i)=>
+ `<g><rect x="${x-5}" y="${y-16}" width="10" height="32" rx="3" fill="#a87945" transform="rotate(45 ${x} ${y})"/><text x="${x}" y="${y+25}" text-anchor="middle" font-size="10">C${i+1}</text></g>`
+ ).join("");
+ document.getElementById("states").textContent=states.map((s,i)=>`P${i+1}: ${s}`).join(" | ");
+}
+function show(){
+ if(index>=events.length){pause();return}
+ let e=events[index++];
+ document.getElementById("message").textContent=e.message;
+ document.getElementById("counter").textContent=`Event ${index}/${events.length} · ${e.time}s`;
+ draw(e.states);
+ document.getElementById("progress").style.width=(index/events.length*100)+"%";
+ let row=document.createElement("tr");
+ [e.time,"Philosopher "+(e.philosopher+1),e.message].forEach(v=>{let td=document.createElement("td");td.textContent=v;row.appendChild(td)});
+ document.getElementById("logs").appendChild(row);
+}
+function play(){if(timer===null&&index<events.length)timer=setInterval(show,700)}
+function pause(){clearInterval(timer);timer=null}
+function next(){pause();show()}
+function reset(){pause();index=0;document.getElementById("logs").innerHTML="";document.getElementById("message").textContent="Press Play to start";document.getElementById("counter").textContent="Event 0";document.getElementById("progress").style.width="0%";draw(["Thinking","Thinking","Thinking","Thinking"])}
+draw(["Thinking","Thinking","Thinking","Thinking"]);
+</script>
+</body>
+</html>
