@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Readers-Writers Monitor Simulation</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #eef2f7;
+    color: #183153;
+    margin: 0;
+    padding: 24px;
+}
+
+h1 { text-align: center; }
+
+.subtitle {
+    text-align: center;
+    color: #52647a;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin: 18px 0;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px #00000012;
+}
+
+button {
+    padding: 10px 16px;
+    margin: 5px;
+    border: none;
+    border-radius: 6px;
+    background: #1769aa;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover { background: #0e4e83; }
+
+.reader {
+    display: inline-block;
+    background: #d5f5e3;
+    color: #145a32;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 7px;
+}
+
+.writer {
+    display: inline-block;
+    background: #fadbd8;
+    color: #922b21;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 7px;
+}
+
+#progress {
+    height: 12px;
+    width: 0%;
+    background: #1769aa;
+    border-radius: 8px;
+    transition: width 0.2s;
+}
+
+.progress-bg {
+    background: #ddd;
+    border-radius: 8px;
+}
+
+.table-wrap { overflow-x: auto; }
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    background: white;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+th { background: #dce6f1; }
+
+.status {
+    padding: 10px;
+    background: #f4f7fb;
+    border-radius: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Readers-Writers Problem</h1>
+<p class="subtitle">Monitor-Based Synchronization Simulation</p>
+
+<div class="card">
+    <h2>Execution Simulation</h2>
+    <h3 id="message">Press Play to start</h3>
+    <p id="clock">Event: 0</p>
+    <p id="data">Shared data: 0</p>
+    <p class="status" id="status">Waiting to begin</p>
+
+    <h3>Active Readers</h3>
+    <div id="readers">None</div>
+
+    <h3>Active Writers</h3>
+    <div id="writers">None</div>
+
+    <br>
+    <div class="progress-bg">
+        <div id="progress"></div>
+    </div>
+
+    <br>
+    <button onclick="play()">Play</button>
+    <button onclick="pause()">Pause</button>
+    <button onclick="nextEvent()">Next Event</button>
+    <button onclick="resetSimulation()">Reset</button>
+</div>
+
+<div class="card">
+    <h2>Execution Event Log</h2>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Time (s)</th>
+                <th>Thread</th>
+                <th>Action</th>
+                <th>Shared Data</th>
+            </tr>
+        </thead>
+        <tbody id="logs"></tbody>
+    </table>
+    </div>
+</div>
+
+<script>
+const events = [{"time": 0.002, "name": "Reader 1", "action": "waiting", "message": "Reader 1 is waiting to read", "readers": [], "writers": [], "data": 0}, {"time": 0.002, "name": "Reader 1", "action": "reading", "message": "Reader 1 started reading", "readers": ["Reader 1"], "writers": [], "data": 0}, {"time": 0.083, "name": "Reader 3", "action": "waiting", "message": "Reader 3 is waiting to read", "readers": ["Reader 1"], "writers": [], "data": 0}, {"time": 0.083, "name": "Reader 3", "action": "reading", "message": "Reader 3 started reading", "readers": ["Reader 1", "Reader 3"], "writers": [], "data": 0}, {"time": 0.164, "name": "Writer 3", "action": "waiting", "message": "Writer 3 is waiting to write", "readers": ["Reader 1", "Reader 3"], "writers": [], "data": 0}, {"time": 0.245, "name": "Reader 2", "action": "waiting", "message": "Reader 2 is waiting to read", "readers": ["Reader 1", "Reader 3"], "writers": [], "data": 0}, {"time": 0.326, "name": "Writer 1", "action": "waiting", "message": "Writer 1 is waiting to write", "readers": ["Reader 1", "Reader 3"], "writers": [], "data": 0}, {"time": 0.408, "name": "Writer 2", "action": "waiting", "message": "Writer 2 is waiting to write", "readers": ["Reader 1", "Reader 3"], "writers": [], "data": 0}, {"time": 0.489, "name": "Reader 4", "action": "waiting", "message": "Reader 4 is waiting to read", "readers": ["Reader 1", "Reader 3"], "writers": [], "data": 0}, {"time": 0.774, "name": "Reader 3", "action": "read", "message": "Reader 3 read shared data = 0", "readers": ["Reader 1", "Reader 3"], "writers": [], "data": 0}, {"time": 0.774, "name": "Reader 3", "action": "finished", "message": "Reader 3 finished reading", "readers": ["Reader 1"], "writers": [], "data": 0}, {"time": 1.015, "name": "Reader 1", "action": "read", "message": "Reader 1 read shared data = 0", "readers": ["Reader 1"], "writers": [], "data": 0}, {"time": 1.015, "name": "Reader 1", "action": "finished", "message": "Reader 1 finished reading", "readers": [], "writers": [], "data": 0}, {"time": 1.015, "name": "Writer 1", "action": "writing", "message": "Writer 1 started writing", "readers": [], "writers": ["Writer 1"], "data": 0}, {"time": 1.739, "name": "Writer 1", "action": "updated", "message": "Writer 1 updated shared data to 1", "readers": [], "writers": ["Writer 1"], "data": 1}, {"time": 1.739, "name": "Writer 1", "action": "finished", "message": "Writer 1 finished writing", "readers": [], "writers": [], "data": 1}, {"time": 1.74, "name": "Writer 2", "action": "writing", "message": "Writer 2 started writing", "readers": [], "writers": ["Writer 2"], "data": 1}, {"time": 2.424, "name": "Writer 2", "action": "updated", "message": "Writer 2 updated shared data to 2", "readers": [], "writers": ["Writer 2"], "data": 2}, {"time": 2.424, "name": "Writer 2", "action": "finished", "message": "Writer 2 finished writing", "readers": [], "writers": [], "data": 2}, {"time": 2.425, "name": "Writer 3", "action": "writing", "message": "Writer 3 started writing", "readers": [], "writers": ["Writer 3"], "data": 2}, {"time": 3.183, "name": "Writer 3", "action": "updated", "message": "Writer 3 updated shared data to 3", "readers": [], "writers": ["Writer 3"], "data": 3}, {"time": 3.183, "name": "Writer 3", "action": "finished", "message": "Writer 3 finished writing", "readers": [], "writers": [], "data": 3}, {"time": 3.183, "name": "Reader 2", "action": "reading", "message": "Reader 2 started reading", "readers": ["Reader 2"], "writers": [], "data": 3}, {"time": 3.183, "name": "Reader 4", "action": "reading", "message": "Reader 4 started reading", "readers": ["Reader 2", "Reader 4"], "writers": [], "data": 3}, {"time": 3.813, "name": "Reader 2", "action": "read", "message": "Reader 2 read shared data = 3", "readers": ["Reader 2", "Reader 4"], "writers": [], "data": 3}, {"time": 3.813, "name": "Reader 2", "action": "finished", "message": "Reader 2 finished reading", "readers": ["Reader 4"], "writers": [], "data": 3}, {"time": 4.079, "name": "Reader 4", "action": "read", "message": "Reader 4 read shared data = 3", "readers": ["Reader 4"], "writers": [], "data": 3}, {"time": 4.079, "name": "Reader 4", "action": "finished", "message": "Reader 4 finished reading", "readers": [], "writers": [], "data": 3}];
+let index = 0;
+let timer = null;
+
+function showEvent() {
+    if (index >= events.length) {
+        pause();
+
+        document.getElementById("status").textContent =
+            "Simulation completed.";
+
+        return;
+    }
+
+    const e = events[index];
+
+    document.getElementById("message").textContent = e.message;
+
+    document.getElementById("clock").textContent =
+        "Event: " + (index + 1) + " / " + events.length +
+        " | Time: " + e.time + " seconds";
+
+    document.getElementById("data").textContent =
+        "Shared data: " + e.data;
+
+    document.getElementById("status").textContent =
+        "Action: " + e.action;
+
+    document.getElementById("readers").innerHTML =
+        e.readers.length
+        ? e.readers.map(x =>
+            '<span class="reader">' + x + '</span>').join("")
+        : "No active readers";
+
+    document.getElementById("writers").innerHTML =
+        e.writers.length
+        ? e.writers.map(x =>
+            '<span class="writer">' + x + '</span>').join("")
+        : "No active writers";
+
+    document.getElementById("progress").style.width =
+        ((index + 1) / events.length * 100) + "%";
+
+    const row = document.createElement("tr");
+
+    [e.time, e.name, e.message, e.data].forEach(value => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.appendChild(cell);
+    });
+
+    document.getElementById("logs").appendChild(row);
+
+    index++;
+}
+
+function play() {
+    if (timer === null && index < events.length) {
+        timer = setInterval(showEvent, 800);
+    }
+}
+
+function pause() {
+    if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+    }
+}
+
+function nextEvent() {
+    pause();
+    showEvent();
+}
+
+function resetSimulation() {
+    pause();
+    index = 0;
+
+    document.getElementById("message").textContent =
+        "Press Play to start";
+
+    document.getElementById("clock").textContent = "Event: 0";
+    document.getElementById("data").textContent = "Shared data: 0";
+    document.getElementById("status").textContent = "Waiting to begin";
+    document.getElementById("readers").textContent = "None";
+    document.getElementById("writers").textContent = "None";
+    document.getElementById("progress").style.width = "0%";
+    document.getElementById("logs").innerHTML = "";
+}
+</script>
+
+</body>
+</html>
